@@ -17,6 +17,7 @@
 -------------------------------------------------------------*/
 #include <amxmodx>
 #include <zombie_plague_special>
+#include <zpsp_vip>
 
 /*-------------------------------------------------------------
 -----> Configuracoes <-----
@@ -120,6 +121,7 @@ new const Mods[MAX_MODS][_handler] = {
 	{ "Shadow", "Shadow the Hedgehog", "O Vegeta do Sonic", 75, "zp_vip_buy_shadow_limit", "1", GET_ZOMBIE },
 	{ "Xiter", "Xiter", "Nao Use", 75, "zp_vip_buy_xiter_limit", "1", GET_HUMAN },
 	{ "Antidoter", "Antidoter", "Vacina conta T-Virus", 75, "zp_vip_buy_antidoter_limit", "1", GET_HUMAN },
+	{ "Grenadier", "Grenadier", "Bombinhas mortais", 75, "zp_vip_buy_grenadier_limit", "1", GET_HUMAN },
 	
 	// Private modes (O plugin nao depende deles pra funcionar)
 	{ "Goku", "Goku", "Dragon Ball Z", 75, "zp_vip_buy_goku_limit", "1", GET_HUMAN },
@@ -129,26 +131,6 @@ new const Mods[MAX_MODS][_handler] = {
 	{ "Mario", "Mario Bros", "Aquele que te come atras do armario", 75, "zp_vip_buy_mario_limit", "1", GET_HUMAN },
 	{ "Naruto", "Naruto", "Tem 9 caudas no cu", 75, "zp_vip_buy_naruto_limit", "1", GET_HUMAN }
 };
-
-/*-------------------------------------------------------------
------> Somente para profissionais <-----
--------------------------------------------------------------*/
-// Coisas do VM (Tera include em breve)
-#define ZV_TEAM_ZOMBIE (1<<0) 
-#define ZV_TEAM_HUMAN (1<<1)
-#define ZV_PLUGIN_HANDLED 97
-native zv_register_extra_item(const name[], const discription[], cost, team);
-forward zv_extra_item_selected(id, itemid);
-
-#define ZV_PLUGIN_SUPERCEDE  98 // Oculta o item na selected pre
-native zv_vip_item_textadd(const text[]) // Adiciona uma descricao extra
-forward zv_extra_item_selected_pre(id, itemid); // Executa na hora que esta escolhendo o item
-
-// Nao Ripe
-#define PLUGIN "[ZP] Compra de mods + Contagem de rounds pra compra"
-#define VERSION "1.4"
-#define AUTHOR "Perfect Scrash"
-
 
 /*-------------------------------------------------------------
 -----> Variaveis <-----
@@ -161,7 +143,7 @@ new primeira_compra, block, g_mods_id[MAX_MODS]
 -------------------------------------------------------------*/
 public plugin_init() {
 	
-	register_plugin(PLUGIN, VERSION, AUTHOR) // Registro do plugin
+	register_plugin("[ZPSp] *VIP* Item: Buy modes + Round count", "1.5", "Perfect Scrash") // Registro do plugin
 
 	register_event("HLTV", "event_round_start", "a", "1=0", "2=0") // Inicio de round
 	register_event("TextMsg", "event_game_commencing", "a", "2=#Game_Commencing", "2=#Game_will_restart_in");  // Reseta o contador
@@ -184,7 +166,7 @@ public plugin_init() {
 		if(!zp_is_special_class_enable(Mods[i][is_zombie], g_mods_id[i])) // Se encontrar e estiver desligado
 			continue;
 
-		g_item_id[i] = zv_register_extra_item(Mods[i][ModName], Mods[i][ModDescription], Mods[i][Price], ZV_TEAM_HUMAN) // Registro do item da classe correspondente
+		g_item_id[i] = zv_register_extra_item(Mods[i][ModName], Mods[i][ModDescription], Mods[i][Price], ZP_TEAM_HUMAN) // Registro do item da classe correspondente
 		cvar_limit[i] = register_cvar(Mods[i][CvarName], Mods[i][CvarValue]) // Limite de Compras por Mapa da Classe correspondente
 	}	
 }
