@@ -57,6 +57,7 @@ enum {
 	_SHADOW,
 	_XITER,
 	_ANTIDOTER,
+	_GRENADIER,
 
 	// Private modes
 	_GOKU,
