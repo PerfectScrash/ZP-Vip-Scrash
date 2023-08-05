@@ -24,10 +24,13 @@
  * @param description	Extra item description
  * @param cost		    Ammo packs to be deducted on purchase.
  * @param teams		    Bitsum of teams it should be available for.
+ * @param uselang		Item name/desc use lang? (0 - No | 1 - Yes)
+ * @param itemnamelang	Extra item name lang
+ * @param itemdesclang	Extra item name desc
  * @return              An internal extra item ID, or -1 on failure.
  * @error			    If Extra Item name alterady exists
  */
-native zv_register_extra_item(const name[], const description[], cost, team);
+native zv_register_extra_item(const name[], const description[], cost, team, uselang=0, const itemnamelang[]="ITEM_LANG_DEFAULT", const itemdesclang[]="DESC_LANG_DEFAULT");
 
 /**
  * Get VIP Extra Item Name

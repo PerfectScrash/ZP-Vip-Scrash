@@ -10,6 +10,7 @@
 		- 1.2: Adicionado Variados mods e o plugin funciona mesmo com esses mods desligados
 		- 1.3: Melhoria Profunda no codigo
 		- 1.4: Passando suporte somente ao amx 1.8.3 ou superior
+		- 1.5: Adicionando Lang no plugin
 */
 
 /*-------------------------------------------------------------
@@ -18,13 +19,6 @@
 #include <amxmodx>
 #include <zombie_plague_special>
 #include <zpsp_vip>
-
-/*-------------------------------------------------------------
------> Configuracoes <-----
--------------------------------------------------------------*/
-
-// Prefixo no Chat
-#define CHAT_PREFIX "^4[ZP]^1"
 
 /*-------------------------------------------------------------
 -----> Configuracoes avancadas  <-----
@@ -58,12 +52,11 @@ enum {
 	_XITER,
 	_ANTIDOTER,
 	_GRENADIER,
-
-	// Private modes
 	_GOKU,
 	_FRIEZA,
-	_GOLD_FRIEZA,
 	_KURILIN,
+
+	// Private modes
 	_MARIO,
 	_NARUTO,
 
@@ -94,44 +87,43 @@ enum _handler
 */
 new const Mods[MAX_MODS][_handler] = {
 
-	// "Nome real" "Nome no Menu" "Descricao", Preco, "Nome da Cvar", "Valor da Cvar", Time
+	// "Real Name" "Name in Menu (With Lang)" "Description (With Lang)", Price, "Cvar Name", "Cvar Value", Team
 
-	// Classes Internas do Plugin Principal
-	{ "survivor", "Survivor", "Municao Infinita", 75, "zp_vip_buy_survivor_limit", "1", GET_HUMAN },
-	{ "nemesis", "Nemesis", "O Imortal", 75, "zp_vip_buy_nemesis_limit", "1", GET_ZOMBIE },
-	{ "sniper", "Sniper", "O Tiro", 75, "zp_vip_buy_sniper_limit", "1", GET_HUMAN },
-	{ "assassin", "Assassino", "O Nome ja Diz", 75, "zp_vip_buy_assassin_limit", "1", GET_ZOMBIE },
-	{ "berserker", "Berserker", "O Ninja", 75, "zp_vip_buy_berserker_limit", "1", GET_HUMAN },
-	{ "predator", "Predator", "Assassino Invisivel", 75, "zp_vip_buy_predator_limit", "1", GET_ZOMBIE },
-	{ "dragon", "Dragon", "Pode Voar", 75, "zp_vip_buy_dragon_limit", "1", GET_ZOMBIE },
-	{ "wesker", "Wesker", "Deagle da Morte", 75, "zp_vip_buy_wesker_limit", "1", GET_HUMAN },
-	{ "bombardier", "Bombardier", "Granadas do Infinito", 75, "zp_vip_buy_bombardier_limit", "1", GET_ZOMBIE },
-	{ "spy", "Spy", "Punheteiro Invisivel", 75, "zp_vip_buy_spy_limit", "1", GET_HUMAN },
+	// Internal Special Classes
+	{ "survivor", "BUY_MODE_SURVIVOR_NAME", "BUY_MODE_SURVIVOR_DESC", 75, "zp_vip_buy_survivor_limit", "1", GET_HUMAN },
+	{ "nemesis", "BUY_MODE_NEMESIS_NAME", "BUY_MODE_NEMESIS_DESC", 75, "zp_vip_buy_nemesis_limit", "1", GET_ZOMBIE },
+	{ "sniper", "BUY_MODE_SNIPER_NAME", "BUY_MODE_SNIPER_DESC", 75, "zp_vip_buy_sniper_limit", "1", GET_HUMAN },
+	{ "assassin", "BUY_MODE_ASSASSIN_NAME", "BUY_MODE_ASSASSIN_DESC", 75, "zp_vip_buy_assassin_limit", "1", GET_ZOMBIE },
+	{ "berserker", "BUY_MODE_BERSERKER_NAME", "BUY_MODE_BERSERKER_DESC", 75, "zp_vip_buy_berserker_limit", "1", GET_HUMAN },
+	{ "predator", "BUY_MODE_PREDATOR_NAME", "BUY_MODE_PREDATOR_DESC", 75, "zp_vip_buy_predator_limit", "1", GET_ZOMBIE },
+	{ "dragon", "BUY_MODE_DRAGON_NAME", "BUY_MODE_DRAGON_DESC", 75, "zp_vip_buy_dragon_limit", "1", GET_ZOMBIE },
+	{ "wesker", "BUY_MODE_WESKER_NAME", "BUY_MODE_WESKER_DESC", 75, "zp_vip_buy_wesker_limit", "1", GET_HUMAN },
+	{ "bombardier", "BUY_MODE_BOMBARDIER_NAME", "BUY_MODE_BOMBARDIER_DESC", 75, "zp_vip_buy_bombardier_limit", "1", GET_ZOMBIE },
+	{ "spy", "BUY_MODE_SPY_NAME", "BUY_MODE_SPY_DESC", 75, "zp_vip_buy_spy_limit", "1", GET_HUMAN },
 
 	// Classes Externas (O plugin nao depende delas pra funcionar)
-	{ "Morpheus", "Morpheus", "Dual MP5", 75, "zp_vip_buy_morpheus_limit", "1", GET_HUMAN },
-	{ "Chuck Norris", "Chuck Norris", "Ate o Thanos Treme", 75, "zp_vip_buy_chuck_norris_limit", "1", GET_HUMAN },
-	{ "Alien", "Alien", "ETzaum", 75, "zp_vip_buy_alien_limit", "1", GET_ZOMBIE },
-	{ "Raptor", "Raptor", "Mais Rapido que o Sonic", 75, "zp_vip_buy_raptor_limit", "1", GET_ZOMBIE },
-	{ "Dog", "Cachorro", "Esse Morde", 75, "zp_vip_buy_dog_limit", "1", GET_ZOMBIE },
-	{ "Priest", "Padre", "Tira o Capeta do Zumbi", 75, "zp_vip_buy_priest_limit", "1", GET_HUMAN },
-	{ "Thanos", "Thanos", "O Fodao", 75, "zp_vip_buy_thanos_limit", "1", GET_ZOMBIE },
-	{ "Pain", "Pain (Nagato)", "O Mundo tem que conhecer a DOR", 75, "zp_vip_buy_pain_limit", "1", GET_HUMAN },
-	{ "Plasma", "Plasma", "Plasma Rifle FODA", 75, "zp_vip_buy_plasma_limit", "1", GET_HUMAN },
-	{ "Sonic", "Sonic the Hedgehog", "Melhor que Mario", 75, "zp_vip_buy_sonic_limit", "1", GET_HUMAN },
-	{ "Shadow", "Shadow the Hedgehog", "O Vegeta do Sonic", 75, "zp_vip_buy_shadow_limit", "1", GET_ZOMBIE },
-	{ "Xiter", "Xiter", "Nao Use", 75, "zp_vip_buy_xiter_limit", "1", GET_HUMAN },
-	{ "Antidoter", "Antidoter", "Vacina conta T-Virus", 75, "zp_vip_buy_antidoter_limit", "1", GET_HUMAN },
-	{ "Grenadier", "Grenadier", "Bombinhas mortais", 75, "zp_vip_buy_grenadier_limit", "1", GET_HUMAN },
+	{ "Morpheus", "BUY_MODE_MORPHEUS_NAME", "BUY_MODE_MORPHEUS_DESC", 75, "zp_vip_buy_morpheus_limit", "1", GET_HUMAN },
+	{ "Chuck Norris", "BUY_MODE_CHUCK_NORIS_NAME", "BUY_MODE_CHUCK_NORIS_DESC", 75, "zp_vip_buy_chuck_norris_limit", "1", GET_HUMAN },
+	{ "Alien", "BUY_MODE_ALIEN_NAME", "BUY_MODE_ALIEN_DESC", 75, "zp_vip_buy_alien_limit", "1", GET_ZOMBIE },
+	{ "Raptor", "BUY_MODE_RAPTOR_NAME", "BUY_MODE_RAPTOR_DESC", 75, "zp_vip_buy_raptor_limit", "1", GET_ZOMBIE },
+	{ "Dog", "BUY_MODE_DOG_NAME", "BUY_MODE_DOG_DESC", 75, "zp_vip_buy_dog_limit", "1", GET_ZOMBIE },
+	{ "Priest", "BUY_MODE_PRIEST_NAME", "BUY_MODE_PRIEST_DESC", 75, "zp_vip_buy_priest_limit", "1", GET_HUMAN },
+	{ "Thanos", "BUY_MODE_THANOS_NAME", "BUY_MODE_THANOS_DESC", 75, "zp_vip_buy_thanos_limit", "1", GET_ZOMBIE },
+	{ "Pain", "BUY_MODE_PAIN_NAME", "BUY_MODE_PAIN_DESC", 75, "zp_vip_buy_pain_limit", "1", GET_HUMAN },
+	{ "Plasma", "BUY_MODE_PLASMA_NAME", "BUY_MODE_PLASMA_DESC", 75, "zp_vip_buy_plasma_limit", "1", GET_HUMAN },
+	{ "Sonic", "BUY_MODE_SONIC_NAME", "BUY_MODE_SONIC_DESC", 75, "zp_vip_buy_sonic_limit", "1", GET_HUMAN },
+	{ "Shadow", "BUY_MODE_SHADOW_NAME", "BUY_MODE_SHADOW_DESC", 75, "zp_vip_buy_shadow_limit", "1", GET_ZOMBIE },
+	{ "Xiter", "BUY_MODE_XITER_NAME", "BUY_MODE_XITER_DESC", 75, "zp_vip_buy_xiter_limit", "1", GET_HUMAN },
+	{ "Antidoter", "BUY_MODE_ANTIDOTER_NAME", "BUY_MODE_ANTIDOTER_DESC", 75, "zp_vip_buy_antidoter_limit", "1", GET_HUMAN },
+	{ "Grenadier", "BUY_MODE_GRENADIER_NAME", "BUY_MODE_GRENADIER_DESC", 75, "zp_vip_buy_grenadier_limit", "1", GET_HUMAN },
+	{ "Goku", "BUY_MODE_GOKU_NAME", "BUY_MODE_GOKU_DESC", 75, "zp_vip_buy_goku_limit", "1", GET_HUMAN },
+	{ "Frieza", "BUY_MODE_FRIEZA_NAME", "BUY_MODE_FRIEZA_DESC", 75, "zp_vip_buy_frieza_limit", "1", GET_ZOMBIE },
+	{ "Krillin", "BUY_MODE_KRILLIN_NAME", "BUY_MODE_KRILLIN_DESC", 75, "zp_vip_buy_krillin_limit", "1", GET_HUMAN },
 	
 	// Private modes (O plugin nao depende deles pra funcionar)
-	{ "Goku", "Goku", "Dragon Ball Z", 75, "zp_vip_buy_goku_limit", "1", GET_HUMAN },
-	{ "Frieza", "Frieza", "Dragon Ball Z", 75, "zp_vip_buy_frieza_limit", "1", GET_ZOMBIE },
-	{ "Golden Frieza", "Frieza", "Dragon Ball Z", 75, "zp_vip_buy_frieza_limit", "1", GET_ZOMBIE },
-	{ "Krillin", "Kurilin", "So sabe morrer", 75, "zp_vip_buy_krillin_limit", "1", GET_HUMAN },
-	{ "Mario", "Mario Bros", "Aquele que te come atras do armario", 75, "zp_vip_buy_mario_limit", "1", GET_HUMAN },
-	{ "Naruto", "Naruto", "Tem 9 caudas no cu", 75, "zp_vip_buy_naruto_limit", "1", GET_HUMAN }
-};
+	{ "Mario", "BUY_MODE_MARIO_NAME", "BUY_MODE_MARIO_DESC", 75, "zp_vip_buy_mario_limit", "1", GET_HUMAN },
+	{ "Naruto", "BUY_MODE_NARUTO_NAME", "BUY_MODE_NARUTO_DESC", 75, "zp_vip_buy_naruto_limit", "1", GET_HUMAN }
+}
 
 /*-------------------------------------------------------------
 -----> Variaveis <-----
@@ -145,6 +137,7 @@ new primeira_compra, block, g_mods_id[MAX_MODS]
 public plugin_init() {
 	
 	register_plugin("[ZPSp] *VIP* Item: Buy modes + Round count", "1.5", "Perfect Scrash") // Registro do plugin
+	register_dictionary("zpsp_vip_buy_modes.txt")
 
 	register_event("HLTV", "event_round_start", "a", "1=0", "2=0") // Inicio de round
 	register_event("TextMsg", "event_game_commencing", "a", "2=#Game_Commencing", "2=#Game_will_restart_in");  // Reseta o contador
@@ -167,7 +160,7 @@ public plugin_init() {
 		if(!zp_is_special_class_enable(Mods[i][is_zombie], g_mods_id[i])) // Se encontrar e estiver desligado
 			continue;
 
-		g_item_id[i] = zv_register_extra_item(Mods[i][ModName], Mods[i][ModDescription], Mods[i][Price], ZP_TEAM_HUMAN) // Registro do item da classe correspondente
+		g_item_id[i] = zv_register_extra_item(Mods[i][ModRealName], Mods[i][ModDescription], Mods[i][Price], ZP_TEAM_HUMAN, 1, Mods[i][ModName], Mods[i][ModDescription]) // Registro do item da classe correspondente
 		cvar_limit[i] = register_cvar(Mods[i][CvarName], Mods[i][CvarValue]) // Limite de Compras por Mapa da Classe correspondente
 	}	
 }
@@ -200,20 +193,23 @@ public event_round_start() {
 }
 
 public check_round(id) {
+	static id_lang;
+	id_lang = is_user_connected(id) ? id : LANG_PLAYER
+
 	if(zp_is_escape_map()) // Mapa de zombie escape
-		client_print_color(id, print_team_grey, "%s Mapas de zombie escape nao ha compra de mods. ^3[Compras de Mods Indisponiveis]", CHAT_PREFIX)
+		client_print_color(id, print_team_grey, "%L %L", id_lang, "BUY_MODE_CHAT_PREFIX", id_lang, "BUY_MODE_ESCAPE_NOT_ALLOWED")
 
 	else if(classes_compradas >= get_pcvar_num(cvar_mods_per_map)) // Compras por mapa de todos os mods
-		client_print_color(id, print_team_grey, "%s Ja Foram Comprados ^3%d^1 Mods Nesse Mapa. ^3[Compras de Mods Indisponiveis]", CHAT_PREFIX, get_pcvar_num(cvar_mods_per_map))
+		client_print_color(id, print_team_grey, "%L %L", id_lang, "BUY_MODE_CHAT_PREFIX", id_lang, "BUY_MODE_MAX_LIMIT", get_pcvar_num(cvar_mods_per_map))
 
 	else if(block) // Travamento basico para evitar mods seguidos
-		client_print_color(id, print_team_grey, "%s Alguem Ganhou Mod no Round Passado Aguarde mais alguns rounds. ^3[Compra Nao Permitida]", CHAT_PREFIX)
+		client_print_color(id, print_team_grey, "%L %L", id_lang, "BUY_MODE_CHAT_PREFIX", id_lang, "BUY_MODE_SPECIAL_ROUND_LAST")
 
 	else if(!primeira_compra) // Verifica se eh a primeira compra, caso sim, libera a compra no segundo round do mapa
-		client_print_color(id, print_team_blue, "%s Ainda Nao foram comprados mods Nesse mapa. %s", CHAT_PREFIX, rounds_passados > 1 ? "^4[Compra Permitida]" : "^3[Compra Permitida somente no Proximo Round]")
+		client_print_color(id, print_team_grey, "%L %L", id_lang, "BUY_MODE_CHAT_PREFIX", id_lang, "BUY_MODE_FIRST_BUY", id_lang, rounds_passados > 1 ? "BUY_MODE_ALLOWED" : "BUY_MODE_ALLOWED_NEXT")
 	
 	else // Verifica se passou os rounds o suficiente
-		client_print_color(id, print_team_default, "%s Passou ^3%d^1 Round(s) depois da Ultima Compra de Mod. ^4%s", CHAT_PREFIX, rounds_passados, rounds_passados >= get_pcvar_num(cvar_rounds_for_buy) ? "^4[Compra Permitida]" : "")
+		client_print_color(id, print_team_grey, "%L %L", id_lang, "BUY_MODE_CHAT_PREFIX", id_lang, "BUY_MODE_ROUND_COUNT", rounds_passados, rounds_passados >= get_pcvar_num(cvar_rounds_for_buy) ? fmt("%L", id_lang, "BUY_MODE_ALLOWED") : "")
 }
 
 // Desbloqueio da compra
@@ -235,16 +231,13 @@ public zp_round_started(gm) {
 }
 
 // Ao comprar o item
-public zv_extra_item_selected(id, itemid) 
-{
+public zv_extra_item_selected(id, itemid) {
 	static i;
-	for(i = 0; i < MAX_MODS; i++)
-	{
+	for(i = 0; i < MAX_MODS; i++) {
 		if(g_item_id[i] == -1)
 			continue;
 		
-		if(itemid == g_item_id[i]) 
-		{
+		if(itemid == g_item_id[i]) {
 			if(!get_mod_buy_allow(id, i))
 				return ZV_PLUGIN_HANDLED;
 			
@@ -256,11 +249,9 @@ public zv_extra_item_selected(id, itemid)
 }
 
 // Verifica se esta disponivel a classe, caso contrario a classe ira ficar oculto no VM. [Somente nos VMs especificos]
-public zv_extra_item_selected_pre(id, itemid) 
-{
+public zv_extra_item_selected_pre(id, itemid) {
 	static i;
-	for(i = 0; i < MAX_MODS; i++) 
-	{
+	for(i = 0; i < MAX_MODS; i++) {
 		if(g_item_id[i] == -1)
 			continue;
 
@@ -271,59 +262,57 @@ public zv_extra_item_selected_pre(id, itemid)
 }
 
 // Verifica se esta disponivel
-public get_mod_buy_allow(id, mod)
-{
+public get_mod_buy_allow(id, mod) {
 	if(zp_is_escape_map()) {
-		client_print_color(id, print_team_grey, "%s Mapas de zombie escape nao ha compra de mods. ^3[Compras de Mods Indisponiveis]", CHAT_PREFIX)
+		client_print_color(id, print_team_grey, "%L %L", id, "BUY_MODE_CHAT_PREFIX", id, "BUY_MODE_ESCAPE_NOT_ALLOWED")
 		return false;
 	}
 	if(get_pcvar_num(cvar_limit[mod]) <= 0) {
-		client_print_color(id, print_team_default, "%s A Compra desse mod esta desligada no momento", CHAT_PREFIX)
+		client_print_color(id, print_team_default, "%L %L", id, "BUY_MODE_CHAT_PREFIX", id, "BUY_MODE_DISABLE")
 		return false
 	}
 
 	if(primeira_compra) { // Ja houve compra de mods
 		if(rounds_passados < get_pcvar_num(cvar_rounds_for_buy)) { // Nao passou os rounds o bastante
-			client_print_color(id, print_team_default, "%s Aguarde Mais Alguns Rounds Para Comprar Mod", CHAT_PREFIX)
+			client_print_color(id, print_team_default, "%L %L", id, "BUY_MODE_CHAT_PREFIX", id, "BUY_MODE_WAIT_ROUNDS")
 			return false
 		}
 		if(classes_compradas >= get_pcvar_num(cvar_mods_per_map)) { // Limite por mapa atingido
-			client_print_color(id, print_team_default, "%s Ja Foram Comprados ^3%d^1 Mods Nesse Mapa. Compras de Mods Indisponiveis", CHAT_PREFIX, classes_compradas)
+			client_print_color(id, print_team_default, "%L %L", id, "BUY_MODE_CHAT_PREFIX", id, "BUY_MODE_MAX_LIMIT", classes_compradas)
 			return false
 		}
 	}
 	else { // Nao houve compras ainda
 		if(rounds_passados <= 1) {
-			client_print_color(id, print_team_default, "%s Primeira Compra de Mod Sera Somente Permitida no Segundo Round do Mapa", CHAT_PREFIX)
+			client_print_color(id, print_team_default, "%L %L", id, "BUY_MODE_CHAT_PREFIX", id, "BUY_MODE_WAIT_SEC_ROUND")
 			return false
 		}
 	}
 
 	if(block) { // Ja teve mod especial no round anterior
-		client_print_color(id, print_team_red, "%s Alguem Ganhou Mod no Round Passado Aguarde mais alguns rounds. ^3[Compra Nao Permitida]", CHAT_PREFIX)
+		client_print_color(id, print_team_red, "%L %L", id, "BUY_MODE_CHAT_PREFIX", id, "BUY_MODE_SPECIAL_ROUND_LAST")
 		return false
 	}
 
 	if(g_limit[mod] >= get_pcvar_num(cvar_limit[mod])) { // Limite por mapa de classe especifica
-		client_print_color(id, print_team_default, "%s Esse mod ja foi comprado ^3%d^1 vezes nesse mapa. ^3[Tente com outro mod]", CHAT_PREFIX, get_pcvar_num(cvar_limit[mod]))
+		client_print_color(id, print_team_default, "%L %L", id, "BUY_MODE_CHAT_PREFIX", id, "BUY_MODE_SINGLE_MAX_LIMIT", get_pcvar_num(cvar_limit[mod]))
 		return false
 	}
 
 	if(zp_has_round_started()) { // Um modo ja foi iniciado
-		client_print_color(id, print_team_default, "%s Voce nao pode comprar depois da infeccao.", CHAT_PREFIX) 
+		client_print_color(id, print_team_default, "%L %L", id, "BUY_MODE_CHAT_PREFIX", id, "BUY_MODE_NOT_ALLOWED_INFECTION")
 		return false
 	}
 
 	if(!allow_buy) { // Anti-Bug - Previne que os troxas comprem mod nos primeiros segundos do round
-		client_print_color(id, print_team_default, "^4[Anti-Bug]^1 Aguarde Alguns Segundos Para Comprar Mod") 
+		client_print_color(id, print_team_default, "%L %L", id, "BUY_MODE_CHAT_PREFIX", id, "BUY_MODE_ANTIBUG")
 		return false
 	}
 	return true
 }
 
 // Seta o modo comprado
-public set_user_mod(id, mod)
-{
+public set_user_mod(id, mod) {
 	// Verifica se a compra esta disponivel [De novo]
 	if(!get_mod_buy_allow(id, mod))
 		return;
@@ -331,7 +320,7 @@ public set_user_mod(id, mod)
 	static name[32];
 	get_user_name(id, name, charsmax(name)) // Nome do jogador
 	zp_make_user_special(id, g_mods_id[mod], Mods[mod][is_zombie]) // Converte a classe comprada
-	client_print_color(0, print_team_default, "%s O Jogador ^3%s ^1Comprou o Mod ^3[%s]^1.", CHAT_PREFIX, name, Mods[mod][ModName]) // Mensagem no chat
+	client_print_color(0, print_team_default, "%L %L", LANG_PLAYER, "BUY_MODE_CHAT_PREFIX", LANG_PLAYER, "BUY_MODE_ANTIBUG", name, LANG_PLAYER, Mods[mod][ModName])
 	g_limit[mod]++ // Incrementa a contagem para o limite de classe especifica
 	rounds_passados = 0 // Zera a contagem de rounds passados
 	classes_compradas++ // Incrementa a contagem de vezes que foi comprada
@@ -339,8 +328,7 @@ public set_user_mod(id, mod)
 }
 
 // Verifica quantos negos de classe especial estao vivos
-stock get_alive_specials()
-{
+stock get_alive_specials() {
 	static count, id
 	count = 0
 

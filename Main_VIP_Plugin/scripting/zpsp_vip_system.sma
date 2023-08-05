@@ -13,14 +13,14 @@
 #define VM_ACESS ADMIN_RESERVATION
 #define IsPlayerVIP(%1) (get_user_flags(%1) & VM_ACESS)
 
-#define CHAT_PREFIX "^4[ZP]^3"
-#define MENU_TAG "\r[\dZP\r]\w"
-
 enum _:items {
 	i_name[MAX_TEXT_BUFFER_SIZE], 
 	i_description[MAX_TEXT_BUFFER_SIZE], 
 	i_cost, 
-	i_team
+	i_team,
+	i_use_lang,
+	i_lang_itemname[MAX_TEXT_BUFFER_SIZE],
+	i_lang_desc[MAX_TEXT_BUFFER_SIZE]
 }
 enum {
 	ITEMS_SELECTED_PRE, 
@@ -37,7 +37,8 @@ new jumpnum[33], dojump[33], cvar_maxjumps, cvar_freemaxjumps, cvar_zmmultijump
 ---> Registro do Plugin
 =================================================================================*/
 public plugin_init() {
-	register_plugin("[ZPSp] Addon: Vip System", "1.2", "[P]erfec[T] [S]cr[@]s[H] | aaarnas")
+	register_plugin("[ZPSp] Addon: Vip System", "1.0", "[P]erfec[T] [S]cr[@]s[H] | aaarnas")
+	register_dictionary("zpsp_vip_system.txt")
 
 	register_clcmd("say vm", "vip_menu")
 	register_clcmd("say /vm", "vip_menu")
@@ -46,7 +47,7 @@ public plugin_init() {
 	register_clcmd("say_team /vm", "vip_menu")
 	register_clcmd("say_team .vm", "vip_menu")
 	
-	RegisterHam(Ham_TakeDamage, "player", "fw_TakeDamage");
+	RegisterHam(Ham_TakeDamage, "player", "fw_TakeDamage", .specialbot=true);
 
 	cvar_armor_amount = register_cvar("zp_vip_armor", "100")
 	cvar_free_armor = register_cvar("zp_user_free_armor", "50")
@@ -57,7 +58,9 @@ public plugin_init() {
 	cvar_freemaxjumps = register_cvar("zp_free_jumps", "1") // Quantia de pulos no ar (Se bota 2 o cara pula 3x)
 	cvar_zmmultijump = register_cvar("zp_allow_zm_multijump", "1")
 	
-	g_itemid = zp_register_extra_item("*VIP* Extra Itens", 0, ZP_TEAM_HUMAN|ZP_TEAM_ZOMBIE)
+	g_itemid = zpsp_register_extra_item("*VIP* Extra Itens", 0, "HUMAN, ZOMBIE", 1, "VIP_EXTRA_ITEM")
+	
+	// g_itemid = zp_register_extra_item("*VIP* Extra Itens", 0, ZP_TEAM_HUMAN|ZP_TEAM_ZOMBIE)
 
 	g_forwards[ITEMS_SELECTED_PRE] = CreateMultiForward("zv_extra_item_selected_pre", ET_CONTINUE, FP_CELL, FP_CELL)
 	g_forwards[ITEMS_SELECTED_POST] = CreateMultiForward("zv_extra_item_selected", ET_CONTINUE, FP_CELL, FP_CELL)
@@ -82,6 +85,9 @@ public native_register_extra_item(plugin_id, param_nums) {
 	get_string(2, extra_items[i_description], MAX_TEXT_BUFFER_SIZE-1);
 	extra_items[i_cost] = get_param(3);
 	extra_items[i_team] = get_param(4);
+	extra_items[i_use_lang] = get_param(5);
+	get_string(6, extra_items[i_lang_itemname], MAX_TEXT_BUFFER_SIZE-1);
+	get_string(7, extra_items[i_lang_desc], MAX_TEXT_BUFFER_SIZE-1);
 	ArrayPushArray(items_database, extra_items)
 	g_registered_items_count++
 	return (g_registered_items_count-1)
@@ -201,12 +207,12 @@ public vip_menu(id) {
 		return
 	
 	if(!g_registered_items_count || zp_get_human_special_class(id) || zp_get_zombie_special_class(id)) {
-		client_print_color(id, print_team_default, "%s Menu de Itens Extras Desativado para sua classe!", CHAT_PREFIX)
+		client_print_color(id, print_team_default, "%L %L", id, "VIP_CHAT_PREFIX", id, "VIP_ITEM_DISABLE")
 		return;
 	}
 		
 	new holder[150], menu, i, team_check, ammo_packs, check
-	formatex(holder, charsmax(holder), "%s Vip Main Menu:^nTeam: %s^n\wStatus: %s", MENU_TAG, zp_get_user_zombie(id) ? "\r[Zombie]" : "\y[Humano]", IsPlayerVIP(id) ? "\rCom Vip :)" : "\rSem Vip :(")
+	formatex(holder, charsmax(holder), "%L %L", id, "VIP_MENU_TAG", id, "VIP_MENU_TITLE", id, zp_get_user_zombie(id) ? "VIP_TEAM_ZOMBIE" : "VIP_TEAM_HUMAN", id, IsPlayerVIP(id) ? "VIP_WITH_VIP" : "VIP_WITHOUT_VIP")
 	
 	menu = menu_create(holder, "vip_menu_handler")
 	ammo_packs = zp_get_user_ammo_packs(id)
@@ -224,36 +230,52 @@ public vip_menu(id) {
 		if (g_forward_return >= ZP_PLUGIN_SUPERCEDE)
 			continue;
 
-		if(g_forward_return >= ZP_PLUGIN_HANDLED || !IsPlayerVIP(id) || ammo_packs < extra_items[i_cost]) {
-			formatex(holder, charsmax(holder), "\d%s [%s] [%d] %s", extra_items[i_name], extra_items[i_description], extra_items[i_cost], g_AdditionalMenuText)
-			menu_additem(menu, holder, fmt("%d", i), (1<<30))
+		if(extra_items[i_use_lang]) {
+			if(g_forward_return >= ZP_PLUGIN_HANDLED || !IsPlayerVIP(id) || ammo_packs < extra_items[i_cost]) {
+				formatex(holder, charsmax(holder), "\d%L [%L] [%d] %s", id, extra_items[i_lang_itemname], id, extra_items[i_lang_desc], extra_items[i_cost], g_AdditionalMenuText)
+				menu_additem(menu, holder, fmt("%d", i), (1<<30))
+			}
+			else  {
+				formatex(holder, charsmax(holder), "\w%L \r[%L] \y[%d] %s", id, extra_items[i_lang_itemname], id, extra_items[i_lang_desc], extra_items[i_cost], g_AdditionalMenuText)
+				menu_additem(menu, holder, fmt("%d", i), 0)
+			}
 		}
-		else  {
-			formatex(holder, charsmax(holder), "\w%s \r[%s] \y[%d] %s", extra_items[i_name], extra_items[i_description], extra_items[i_cost], g_AdditionalMenuText)
-			menu_additem(menu, holder, fmt("%d", i), 0)
+		else {
+			if(g_forward_return >= ZP_PLUGIN_HANDLED || !IsPlayerVIP(id) || ammo_packs < extra_items[i_cost]) {
+				formatex(holder, charsmax(holder), "\d%s [%s] [%d] %s", extra_items[i_name], extra_items[i_description], extra_items[i_cost], g_AdditionalMenuText)
+				menu_additem(menu, holder, fmt("%d", i), (1<<30))
+			}
+			else  {
+				formatex(holder, charsmax(holder), "\w%s \r[%s] \y[%d] %s", extra_items[i_name], extra_items[i_description], extra_items[i_cost], g_AdditionalMenuText)
+				menu_additem(menu, holder, fmt("%d", i), 0)
+			}
 		}
 		check++
 		
 	}
 	if(check == 0) {
-		client_print_color(id, print_team_default, "%s Menu de Itens Extras Desativado para sua classe", CHAT_PREFIX)
+		client_print_color(id, print_team_default, "%L %L", id, "VIP_CHAT_PREFIX", id, "VIP_ITEM_DISABLE")
 		return;
 	}
 	
 	menu_setprop(menu, MPROP_EXIT, MEXIT_ALL)
-	menu_setprop(menu, MPROP_NEXTNAME, "Proximo")
-	menu_setprop(menu, MPROP_BACKNAME, "Voltar")
-	menu_setprop(menu, MPROP_EXITNAME, "Sair")
+	menu_setprop(menu, MPROP_NEXTNAME, fmt("%L", id, "VIP_MENU_ITEM_NEXT"))
+	menu_setprop(menu, MPROP_BACKNAME, fmt("%L", id, "VIP_MENU_ITEM_BACK"))
+	menu_setprop(menu, MPROP_EXITNAME, fmt("%L", id, "VIP_MENU_ITEM_EXIT"))
 	menu_display(id, menu, 0)
 }
  
 public vip_menu_handler(id, menu, item) {
-	if(!IsPlayerVIP(id)) {
-		client_print_color(id, print_team_default, "%s Voce Nao eh Membro ^4*VIP*", CHAT_PREFIX)
+	if(item == MENU_EXIT || !is_user_connected(id)) {
 		menu_destroy(menu)
 		return PLUGIN_HANDLED;
 	}
-	if(item == MENU_EXIT || zp_get_human_special_class(id) || zp_get_zombie_special_class(id)) {
+	if(!IsPlayerVIP(id)) {
+		client_print_color(id, print_team_default, "%L %L", id, "VIP_CHAT_PREFIX", id, "VIP_NOT_A_VIP")
+		menu_destroy(menu)
+		return PLUGIN_HANDLED;
+	}
+	if(zp_get_human_special_class(id) || zp_get_zombie_special_class(id)) {
 		menu_destroy(menu)
 		return PLUGIN_HANDLED;
 	}
@@ -276,9 +298,9 @@ public vip_menu_handler(id, menu, item) {
 	ArrayGetArray(items_database, item_id, extra_items)
 	if(ammo_packs >= extra_items[i_cost]) {
 		ExecuteForward(g_forwards[ITEMS_SELECTED_POST], g_forward_return, id, item_id)
-		if(g_forward_return < ZP_PLUGIN_HANDLED) zp_set_user_ammo_packs(id, ammo_packs - extra_items[i_cost]);
+		if(g_forward_return < ZP_PLUGIN_HANDLED) zp_remove_user_ammopacks(id, extra_items[i_cost]);
 	}
-	else client_print_color(id, print_team_default, "%s Voce Nao tem Ammo Packs suficiente", CHAT_PREFIX)
+	else client_print_color(id, print_team_default, "%L %L", id, "VIP_CHAT_PREFIX", id, "VIP_ENGOUT_AMMOPACK")
 
 	menu_destroy(menu)
 	return PLUGIN_HANDLED
@@ -294,7 +316,7 @@ public client_putinserver(id) {
 
 	if(IsPlayerVIP(id)) {
 		static name[32]; get_user_name(id, name, charsmax(name))
-		client_print_color(0, print_team_default, "%s O Jogador ^4*VIP*^1 %s ^3Conectou-se ao Servidor", CHAT_PREFIX, name)
+		client_print_color(0, print_team_default, "%L %L", LANG_PLAYER, "VIP_CHAT_PREFIX", LANG_PLAYER, "VIP_CONNECTED")
 	}
 }
 
