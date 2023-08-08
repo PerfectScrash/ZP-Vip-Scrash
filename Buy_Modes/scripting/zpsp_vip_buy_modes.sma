@@ -1,16 +1,11 @@
 /*
-	[ZPSp *VIP* Extra Item] Mods
+	[ZPSp *VIP* Extra Item] Buy Classes
 
-	* Descricao do Plugin:
-		- Compre o mod que quiser quando for possivel de acordo com a contagem de rounds.
+	* Plugin Description:
+		- Buy the mod you want when possible according to the round count.
 
 	* Change Log:
-		- 1.0: Primeira Versao
-		- 1.1: Fixado alguns bugs e pequenas melhorias no codigo
-		- 1.2: Adicionado Variados mods e o plugin funciona mesmo com esses mods desligados
-		- 1.3: Melhoria Profunda no codigo
-		- 1.4: Passando suporte somente ao amx 1.8.3 ou superior
-		- 1.5: Adicionando Lang no plugin
+		- 1.0: First Version
 */
 
 /*-------------------------------------------------------------
@@ -21,11 +16,11 @@
 #include <zpsp_vip>
 
 /*-------------------------------------------------------------
------> Configuracoes avancadas  <-----
+-----> Config  <-----
 -------------------------------------------------------------*/
-// Classes especiais (Eh necessario mexer aqui caso queira remover/adicionar uma classe)
+// Special Classes
 enum {
-	// Classes do plugin principal
+	// Main plugin special classes
 	_SURVIVOR = 0,
 	_NEMESIS,
 	_SNIPER,
@@ -37,7 +32,7 @@ enum {
 	_BOMBARDIER,
 	_SPY,
 
-	// Classes Externas (Plugin nao depende delas para funcionar)
+	// External Special Classes (Plugin does not depend on them to work)
 	_MORPHEUS,
 	_CHUCK,
 	_ALIEN,
@@ -63,7 +58,7 @@ enum {
 	MAX_MODS
 }
 
-// Enum manipuladora de variavel
+// Variable Enum
 enum _handler 
 { 
 	ModRealName[32],
@@ -75,15 +70,15 @@ enum _handler
 	is_zombie 
 };
 
-// Registro das classes - Tenha cuidado na hora de adicionar ou remover, pois tem que estar na mesma ordem das enums
+// Buy Class Register - Be careful when adding or removing, as it has to be in the same order as the enums
 /* 
-	- Nome Real: O nome que fica na sma da classe especial
-	- Nome no menu: O Nome que ficara no item extra
-	- Descricao: Descricao da classe especial
-	- Preco: Preco em Ammo packs da Classe
-	- Nome da Cvar: Nome da Cvar de Compra
-	- Valor da Cvar: Valor padrao da cvar de compra
-	- Time: É Classe Especial Humana ou Classe Especial Zumbi - (Use GET_HUMAN para Humano e GET_ZOMBIE para zumbi)	
+	- Real Name: The Real name that used for register special class
+	- Name in menu lang key: Name in vip menu
+	- Item Description lang key: Description in vip menu
+	- Price: Price in ammo packs
+	- Cvar Name: Register cvar name
+	- Cvar Value: Default Cvar Value of limit
+	- Team: Its a Special Human or a Special Zombie - (Use GET_HUMAN for special human or GET_ZOMBIE for special zombie)	
 */
 new const Mods[MAX_MODS][_handler] = {
 
@@ -101,7 +96,7 @@ new const Mods[MAX_MODS][_handler] = {
 	{ "bombardier", "BUY_MODE_BOMBARDIER_NAME", "BUY_MODE_BOMBARDIER_DESC", 75, "zp_vip_buy_bombardier_limit", "1", GET_ZOMBIE },
 	{ "spy", "BUY_MODE_SPY_NAME", "BUY_MODE_SPY_DESC", 75, "zp_vip_buy_spy_limit", "1", GET_HUMAN },
 
-	// Classes Externas (O plugin nao depende delas pra funcionar)
+	// External Special Classes (Plugin does not depend on them to work)
 	{ "Morpheus", "BUY_MODE_MORPHEUS_NAME", "BUY_MODE_MORPHEUS_DESC", 75, "zp_vip_buy_morpheus_limit", "1", GET_HUMAN },
 	{ "Chuck Norris", "BUY_MODE_CHUCK_NORIS_NAME", "BUY_MODE_CHUCK_NORIS_DESC", 75, "zp_vip_buy_chuck_norris_limit", "1", GET_HUMAN },
 	{ "Alien", "BUY_MODE_ALIEN_NAME", "BUY_MODE_ALIEN_DESC", 75, "zp_vip_buy_alien_limit", "1", GET_ZOMBIE },
@@ -120,30 +115,30 @@ new const Mods[MAX_MODS][_handler] = {
 	{ "Frieza", "BUY_MODE_FRIEZA_NAME", "BUY_MODE_FRIEZA_DESC", 75, "zp_vip_buy_frieza_limit", "1", GET_ZOMBIE },
 	{ "Krillin", "BUY_MODE_KRILLIN_NAME", "BUY_MODE_KRILLIN_DESC", 75, "zp_vip_buy_krillin_limit", "1", GET_HUMAN },
 	
-	// Private modes (O plugin nao depende deles pra funcionar)
+	// Private modes
 	{ "Mario", "BUY_MODE_MARIO_NAME", "BUY_MODE_MARIO_DESC", 75, "zp_vip_buy_mario_limit", "1", GET_HUMAN },
 	{ "Naruto", "BUY_MODE_NARUTO_NAME", "BUY_MODE_NARUTO_DESC", 75, "zp_vip_buy_naruto_limit", "1", GET_HUMAN }
 }
 
 /*-------------------------------------------------------------
------> Variaveis <-----
+-----> Variable <-----
 -------------------------------------------------------------*/
-new g_item_id[MAX_MODS], cvar_limit[MAX_MODS], g_limit[MAX_MODS], allow_buy, rounds_passados, cvar_rounds_for_buy, classes_compradas, cvar_mods_per_map
-new primeira_compra, block, g_mods_id[MAX_MODS]
+new g_item_id[MAX_MODS], cvar_limit[MAX_MODS], g_limit[MAX_MODS], allow_buy, passed_rounds, cvar_rounds_for_buy, global_buyed_classes, cvar_mods_per_map
+new first_buy, block, g_mods_id[MAX_MODS]
 
 /*-------------------------------------------------------------
------> Registro de plugin <-----
+-----> Plugin Register <-----
 -------------------------------------------------------------*/
 public plugin_init() {
 	
-	register_plugin("[ZPSp] *VIP* Item: Buy modes + Round count", "1.5", "Perfect Scrash") // Registro do plugin
+	register_plugin("[ZPSp] *VIP* Item: Buy modes + Round count", "1.0", "Perfect Scrash") // Plugin Register
 	register_dictionary("zpsp_vip_buy_modes.txt")
 
-	register_event("HLTV", "event_round_start", "a", "1=0", "2=0") // Inicio de round
-	register_event("TextMsg", "event_game_commencing", "a", "2=#Game_Commencing", "2=#Game_will_restart_in");  // Reseta o contador
+	register_event("HLTV", "event_round_start", "a", "1=0", "2=0") // Round Start
+	register_event("TextMsg", "event_game_commencing", "a", "2=#Game_Commencing", "2=#Game_will_restart_in");  // Game Commecing
 
-	cvar_mods_per_map =  register_cvar("zp_vip_buy_classes_map", "3")  // Limite Por Mapa
-	cvar_rounds_for_buy = register_cvar("zp_vip_buy_classes_rounds", "5") // Comprar de 5 em 5 rounds
+	cvar_mods_per_map =  register_cvar("zp_vip_buy_classes_map", "3")  // Global Map limit
+	cvar_rounds_for_buy = register_cvar("zp_vip_buy_classes_rounds", "5") // Buy every 5 rounds
 
 	register_clcmd("say /rounds", "check_round")
 	register_clcmd("say .rounds", "check_round")
@@ -151,75 +146,75 @@ public plugin_init() {
 	register_clcmd("say .round", "check_round")
 
 	for(new i = 0; i < MAX_MODS; i++) {
-		g_item_id[i] = -1 // Valor para classe desligada
-		g_mods_id[i] = zp_get_special_class_id(Mods[i][is_zombie], Mods[i][ModRealName]) // Pesquisa o nome da classe nos registos da base special
+		g_item_id[i] = -1 // Null value for disable class
+		g_mods_id[i] = zp_get_special_class_id(Mods[i][is_zombie], Mods[i][ModRealName]) // Search the class name in the special base registers
 		
-		if(g_mods_id[i] == -1) // Se nao encontrar
+		if(g_mods_id[i] == -1) // If not find
 			continue;
 
-		if(!zp_is_special_class_enable(Mods[i][is_zombie], g_mods_id[i])) // Se encontrar e estiver desligado
+		if(!zp_is_special_class_enable(Mods[i][is_zombie], g_mods_id[i])) // If find but its disable
 			continue;
 
-		g_item_id[i] = zv_register_extra_item(Mods[i][ModRealName], Mods[i][ModDescription], Mods[i][Price], ZP_TEAM_HUMAN, 1, Mods[i][ModName], Mods[i][ModDescription]) // Registro do item da classe correspondente
-		cvar_limit[i] = register_cvar(Mods[i][CvarName], Mods[i][CvarValue]) // Limite de Compras por Mapa da Classe correspondente
+		g_item_id[i] = zv_register_extra_item(Mods[i][ModRealName], Mods[i][ModDescription], Mods[i][Price], ZP_TEAM_HUMAN, 1, Mods[i][ModName], Mods[i][ModDescription]) // Item Register
+		cvar_limit[i] = register_cvar(Mods[i][CvarName], Mods[i][CvarValue]) // Register Cvar for class limit
 	}	
 }
 
 /*-------------------------------------------------------------
------> Funcoes Principais <-----
+-----> Main Functions <-----
 -------------------------------------------------------------*/
-// Inicio do Mapa / Restart Round
+// Map Start / Restart Round / Game commecing
 public event_game_commencing() 
 {
-	rounds_passados = 0 		// Zera contador de rounds
-	classes_compradas = 0 		// Zera o Limite de classes ao todo
-	primeira_compra = false 	// Declara como se ninguem tivesse comprado nenhum mod
-	block = false 				// "Desbloqueia a compra"
+	passed_rounds = 0 			// Clear Round counter
+	global_buyed_classes = 0 	// Clear a global buy class limit
+	first_buy = false 	// Declare as first round
+	block = false 				// "Unlock" Buy
 	
-	// Zera o limite das classes correspondente
+	// Clear a class limit
 	static i;
 	for(i = 0; i < MAX_MODS; i++) 
 		g_limit[i] = 0
 }
 
-// Inicio do round
+// Round Start
 public event_round_start() { 
-	allow_buy = false 	// Anti-Bug - Bloqueia a compra nos primeiros segundos do round
-	rounds_passados++ 	// Incrementa a contagem de rounds
+	allow_buy = false 	// Bug Prevention - Blocks buying in the first few seconds of the round
+	passed_rounds++ 	// Round count increase
 	
-	set_task(5.0, "task_allow_buy"); // Anti-Bug - Desbloqueio das compras apos os primeiros segundos
+	set_task(5.0, "task_allow_buy"); // Bug Prevention - Task for unlock a buy
 	
-	check_round(0); // Mostrar mensagem pra todos
+	check_round(0); // Show round count for every player
 }
 
 public check_round(id) {
 	static id_lang;
 	id_lang = is_user_connected(id) ? id : LANG_PLAYER
 
-	if(zp_is_escape_map()) // Mapa de zombie escape
+	if(zp_is_escape_map()) // Escape map
 		client_print_color(id, print_team_grey, "%L %L", id_lang, "BUY_MODE_CHAT_PREFIX", id_lang, "BUY_MODE_ESCAPE_NOT_ALLOWED")
 
-	else if(classes_compradas >= get_pcvar_num(cvar_mods_per_map)) // Compras por mapa de todos os mods
+	else if(global_buyed_classes >= get_pcvar_num(cvar_mods_per_map)) // Per map purchases of all mods
 		client_print_color(id, print_team_grey, "%L %L", id_lang, "BUY_MODE_CHAT_PREFIX", id_lang, "BUY_MODE_MAX_LIMIT", get_pcvar_num(cvar_mods_per_map))
 
-	else if(block) // Travamento basico para evitar mods seguidos
+	else if(block) // Prevent consecutive special class rounds
 		client_print_color(id, print_team_grey, "%L %L", id_lang, "BUY_MODE_CHAT_PREFIX", id_lang, "BUY_MODE_SPECIAL_ROUND_LAST")
 
-	else if(!primeira_compra) // Verifica se eh a primeira compra, caso sim, libera a compra no segundo round do mapa
-		client_print_color(id, print_team_grey, "%L %L", id_lang, "BUY_MODE_CHAT_PREFIX", id_lang, "BUY_MODE_FIRST_BUY", id_lang, rounds_passados > 1 ? "BUY_MODE_ALLOWED" : "BUY_MODE_ALLOWED_NEXT")
+	else if(!first_buy) // Check if it is the first purchase, if so, release the purchase in the second round of the map
+		client_print_color(id, print_team_grey, "%L %L", id_lang, "BUY_MODE_CHAT_PREFIX", id_lang, "BUY_MODE_FIRST_BUY", id_lang, passed_rounds > 1 ? "BUY_MODE_ALLOWED" : "BUY_MODE_ALLOWED_NEXT")
 	
-	else // Verifica se passou os rounds o suficiente
-		client_print_color(id, print_team_grey, "%L %L", id_lang, "BUY_MODE_CHAT_PREFIX", id_lang, "BUY_MODE_ROUND_COUNT", rounds_passados, rounds_passados >= get_pcvar_num(cvar_rounds_for_buy) ? fmt("%L", id_lang, "BUY_MODE_ALLOWED") : "")
+	else // Check if you passed enough rounds
+		client_print_color(id, print_team_grey, "%L %L", id_lang, "BUY_MODE_CHAT_PREFIX", id_lang, "BUY_MODE_ROUND_COUNT", passed_rounds, passed_rounds >= get_pcvar_num(cvar_rounds_for_buy) ? fmt("%L", id_lang, "BUY_MODE_ALLOWED") : "")
 }
 
-// Desbloqueio da compra
+// Buy Unlock
 public task_allow_buy() 
 	allow_buy = true;
 
-// Inicio de Mod
+// Mod Start
 public zp_round_started(gm) {
 
-	// Verifica se eh mod de classe especial (Externo ou nao) [Gambiarra]
+	// Check if it is special class mod (External or not)
 	if(gm != MODE_INFECTION && gm != MODE_MULTI && gm != MODE_SWARM && gm != MODE_PLAGUE && gm != MODE_LNJ) { 
 		if(get_alive_specials() == 1)
 			block = true
@@ -230,7 +225,7 @@ public zp_round_started(gm) {
 		block = false
 }
 
-// Ao comprar o item
+// On buy item
 public zv_extra_item_selected(id, itemid) {
 	static i;
 	for(i = 0; i < MAX_MODS; i++) {
@@ -248,7 +243,7 @@ public zv_extra_item_selected(id, itemid) {
 	return PLUGIN_CONTINUE
 }
 
-// Verifica se esta disponivel a classe, caso contrario a classe ira ficar oculto no VM. [Somente nos VMs especificos]
+// Checks if the class is available, otherwise the class will be hidden in the vip menu
 public zv_extra_item_selected_pre(id, itemid) {
 	static i;
 	for(i = 0; i < MAX_MODS; i++) {
@@ -261,7 +256,7 @@ public zv_extra_item_selected_pre(id, itemid) {
 	return PLUGIN_CONTINUE
 }
 
-// Verifica se esta disponivel
+// Check if it's available
 public get_mod_buy_allow(id, mod) {
 	if(zp_is_escape_map()) {
 		client_print_color(id, print_team_grey, "%L %L", id, "BUY_MODE_CHAT_PREFIX", id, "BUY_MODE_ESCAPE_NOT_ALLOWED")
@@ -272,62 +267,62 @@ public get_mod_buy_allow(id, mod) {
 		return false
 	}
 
-	if(primeira_compra) { // Ja houve compra de mods
-		if(rounds_passados < get_pcvar_num(cvar_rounds_for_buy)) { // Nao passou os rounds o bastante
+	if(first_buy) { // There has already been a purchase of mods
+		if(passed_rounds < get_pcvar_num(cvar_rounds_for_buy)) { // Didn't go through the rounds enough
 			client_print_color(id, print_team_default, "%L %L", id, "BUY_MODE_CHAT_PREFIX", id, "BUY_MODE_WAIT_ROUNDS")
 			return false
 		}
-		if(classes_compradas >= get_pcvar_num(cvar_mods_per_map)) { // Limite por mapa atingido
-			client_print_color(id, print_team_default, "%L %L", id, "BUY_MODE_CHAT_PREFIX", id, "BUY_MODE_MAX_LIMIT", classes_compradas)
+		if(global_buyed_classes >= get_pcvar_num(cvar_mods_per_map)) { // Limit per map reached
+			client_print_color(id, print_team_default, "%L %L", id, "BUY_MODE_CHAT_PREFIX", id, "BUY_MODE_MAX_LIMIT", global_buyed_classes)
 			return false
 		}
 	}
-	else { // Nao houve compras ainda
-		if(rounds_passados <= 1) {
+	else { // No purchases yet
+		if(passed_rounds <= 1) {
 			client_print_color(id, print_team_default, "%L %L", id, "BUY_MODE_CHAT_PREFIX", id, "BUY_MODE_WAIT_SEC_ROUND")
 			return false
 		}
 	}
 
-	if(block) { // Ja teve mod especial no round anterior
+	if(block) { // Already had a special mod in the previous round
 		client_print_color(id, print_team_red, "%L %L", id, "BUY_MODE_CHAT_PREFIX", id, "BUY_MODE_SPECIAL_ROUND_LAST")
 		return false
 	}
 
-	if(g_limit[mod] >= get_pcvar_num(cvar_limit[mod])) { // Limite por mapa de classe especifica
+	if(g_limit[mod] >= get_pcvar_num(cvar_limit[mod])) { // Limit by specific class map
 		client_print_color(id, print_team_default, "%L %L", id, "BUY_MODE_CHAT_PREFIX", id, "BUY_MODE_SINGLE_MAX_LIMIT", get_pcvar_num(cvar_limit[mod]))
 		return false
 	}
 
-	if(zp_has_round_started()) { // Um modo ja foi iniciado
+	if(zp_has_round_started()) { // A game mode has already been started
 		client_print_color(id, print_team_default, "%L %L", id, "BUY_MODE_CHAT_PREFIX", id, "BUY_MODE_NOT_ALLOWED_INFECTION")
 		return false
 	}
 
-	if(!allow_buy) { // Anti-Bug - Previne que os troxas comprem mod nos primeiros segundos do round
+	if(!allow_buy) { // Bug Prevention - Blocks buying in the first few seconds of the round
 		client_print_color(id, print_team_default, "%L %L", id, "BUY_MODE_CHAT_PREFIX", id, "BUY_MODE_ANTIBUG")
 		return false
 	}
 	return true
 }
 
-// Seta o modo comprado
+// When buy mod set the mode
 public set_user_mod(id, mod) {
-	// Verifica se a compra esta disponivel [De novo]
+	// Check if it's available
 	if(!get_mod_buy_allow(id, mod))
 		return;
 	
 	static name[32];
-	get_user_name(id, name, charsmax(name)) // Nome do jogador
-	zp_make_user_special(id, g_mods_id[mod], Mods[mod][is_zombie]) // Converte a classe comprada
-	client_print_color(0, print_team_default, "%L %L", LANG_PLAYER, "BUY_MODE_CHAT_PREFIX", LANG_PLAYER, "BUY_MODE_ANTIBUG", name, LANG_PLAYER, Mods[mod][ModName])
-	g_limit[mod]++ // Incrementa a contagem para o limite de classe especifica
-	rounds_passados = 0 // Zera a contagem de rounds passados
-	classes_compradas++ // Incrementa a contagem de vezes que foi comprada
-	primeira_compra = true // Declara que ja houve compra de mods
+	get_user_name(id, name, charsmax(name)) // Player name
+	zp_make_user_special(id, g_mods_id[mod], Mods[mod][is_zombie]) // Make user a purchased special class
+	client_print_color(0, print_team_default, "%L %L", LANG_PLAYER, "BUY_MODE_CHAT_PREFIX", LANG_PLAYER, "BUY_MODE_MOD_PURCHASED", name, LANG_PLAYER, Mods[mod][ModName])
+	g_limit[mod]++ // Increments the count to the specified class limit
+	passed_rounds = 0 // Clear the count of past rounds
+	global_buyed_classes++ // Increments the count of times it was purchased
+	first_buy = true // Declares that there has already been a purchase of mods
 }
 
-// Verifica quantos negos de classe especial estao vivos
+// Check Alive Special Class count
 stock get_alive_specials() {
 	static count, id
 	count = 0
