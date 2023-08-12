@@ -16,7 +16,21 @@
 		- VIP Itens menu
 
 	* Change Log:
-		- 1.0: First Version
+		- 1.0: 
+			- First Version
+		- 1.1: 
+			- Separating HH Privileges Acess by flags
+			- Fixed multiple ammo packs in happy hour
+			- Added CFG File
+			- Added Cvar: "zp_vip_flag_acess"
+			- Added Native: "zv_is_in_happyhour"
+			- Added Native: "zv_happyhour_flags"
+			- Added Forward: "zv_happyhour_start"
+			- Added Forward: "zv_happyhour_end"
+
+	* Credits:
+		- [P]erfect [S]crash: For Zombie plague special Vip system.
+		- aaarnas: Part of code of Zombie VIP System
 */
 
 /*===============================================================================
@@ -30,9 +44,20 @@
 /*===============================================================================
 ---> Variable/Defines/Enums/Consts
 =================================================================================*/
+#define VIP_SYSTEM_CONFIG_FILE "zpsp_configs/zpsp_vip.cfg"
+
 #define MAX_TEXT_BUFFER_SIZE 65
-#define VM_ACESS ADMIN_RESERVATION
-#define IsPlayerVIP(%1) (get_user_flags(%1) & VM_ACESS)
+#define IsPlayerVIP(%1) (get_user_flags(%1) & g_vip_flag)
+
+// Flags
+#define ACCESS_VIP_MULTIJUMP (1<<0) 	// a
+#define ACCESS_ARMOR_VIP (1<<1)			// b
+#define ACCESS_EXTRA_DAMAGE (1<<2)		// c
+#define ACCESS_VIP_EXTRA_ITEM (1<<3)	// d
+#define ACCESS_DAMAGE_RWD (1<<4)		// e
+#define ACCESS_VIP_SCORE_PREFIX (1<<5)	// f
+
+#define get_hh_acess(%1) (g_happyhour && (g_hh_flags & %1))
 
 #define TASK_HH 13291931
 
@@ -48,20 +73,22 @@ enum _:items {
 enum {
 	ITEMS_SELECTED_PRE,
 	ITEMS_SELECTED_POST,
+	HH_START,
+	HH_END,
 	MAX_FORWARDS_NUM
 }
 
 new g_forward_return, g_forwards[MAX_FORWARDS_NUM], g_team[33], g_AdditionalMenuText[32], Float:g_damage[33]
 new extra_items[items], Array:items_database, g_registered_items_count, g_itemid, msg_ScoreAttrib
-new cvar_dmg_rwd, cvar_dmg_increase, cvar_ammo_dmg_rwd_quantity, cvar_armor_amount, cvar_free_armor
-new jumpnum[33], dojump[33], cvar_maxjumps, cvar_freemaxjumps, cvar_zmmultijump
-new g_happyhour, cvar_hh[5], cvar_zm_rwd, cvar_hm_rwd
+new cvar_dmg_rwd, cvar_dmg_increase, cvar_ap_dmg_rwd_qtd, cvar_armor_amount, cvar_free_armor, cvar_vip_flag
+new jumpnum[33], dojump[33], cvar_maxjumps, cvar_freemaxjumps, cvar_zmmultijump, g_vip_flag
+new g_happyhour, g_hh_flags, cvar_hh[5]
 
 /*===============================================================================
----> Registro do Plugin
+---> Plugin Register
 =================================================================================*/
 public plugin_init() {
-	register_plugin("[ZPSp] Addon: Vip System", "1.0", "[P]erfec[T] [S]cr[@]s[H] | aaarnas")
+	register_plugin("[ZPSp] Addon: Vip System", "1.1", "[P]erfect [S]crash | aaarnas")
 	register_dictionary("zpsp_vip_system.txt")
 
 	register_clcmd("say vm", "vip_menu")
@@ -73,23 +100,27 @@ public plugin_init() {
 
 	RegisterHam(Ham_TakeDamage, "player", "fw_TakeDamage", .specialbot=true);
 
-	cvar_armor_amount = register_cvar("zp_vip_armor", "100")
-	cvar_free_armor = register_cvar("zp_user_free_armor", "50")
-	cvar_dmg_rwd = register_cvar("zp_vip_damage_reward", "500")
-	cvar_dmg_increase = register_cvar("zp_vip_damage_increase", "1.2")
-	cvar_ammo_dmg_rwd_quantity = register_cvar("zp_vip_ammo_dmg_rwd_quantity", "1")
-	cvar_maxjumps = register_cvar("zp_vip_jumps", "1") // Quantia de pulos no ar (Se bota 2 o cara pula 3x)
-	cvar_freemaxjumps = register_cvar("zp_free_jumps", "1") // Quantia de pulos no ar (Se bota 2 o cara pula 3x)
-	cvar_zmmultijump = register_cvar("zp_allow_zm_multijump", "1")
+	// Global Config
+	cvar_zmmultijump = register_cvar("zp_allow_zm_multijump", "1") 	// Zombies have multijump
 
+	// Free Privilegies
+	cvar_freemaxjumps = register_cvar("zp_free_jumps", "1") 	// Jumps in air (Free)
+	cvar_free_armor = register_cvar("zp_user_free_armor", "10")	// Free Armor amount for non vip players
+
+	// VIP Privilegies
+	cvar_vip_flag = register_cvar("zp_vip_flag_acess", "b")						// VIP flag Acess
+	cvar_armor_amount = register_cvar("zp_vip_armor", "100")					// VIP Free Armor Amount
+	cvar_dmg_rwd = register_cvar("zp_vip_damage_reward", "500")					// Damage require for reward
+	cvar_dmg_increase = register_cvar("zp_vip_damage_increase", "1.2")			// Vip Damage increase
+	cvar_ap_dmg_rwd_qtd = register_cvar("zp_vip_ammo_dmg_rwd_quantity", "1")	// Reward Quantity for ammopack damage
+	cvar_maxjumps = register_cvar("zp_vip_jumps", "1") 							// Jumps in air (VIP)
+
+	// Happyhour
 	cvar_hh[0] = register_cvar("zp_vip_happy_hour_enable", "1")		// Enable happy hour
 	cvar_hh[1] = register_cvar("zp_vip_happy_hour_start", "22")		// Happy Hour Start
 	cvar_hh[2] = register_cvar("zp_vip_happy_hour_end", "5")		// Happy Hour End
-	cvar_hh[3] = register_cvar("zp_vip_happy_hour_ap_multi", "2")	// Happy hour Ammo pack multi
-	cvar_hh[4] = register_cvar("zp_vip_happy_hour_hud", "1")		// Enable Happy hour status hud
-
-	cvar_zm_rwd = get_cvar_pointer("zp_zombie_infect_reward")
-	cvar_hm_rwd = get_cvar_pointer("zp_human_damage_reward")
+	cvar_hh[3] = register_cvar("zp_vip_happy_hour_hud", "1")		// Enable Happy hour status hud
+	cvar_hh[4] = register_cvar("zp_vip_happy_hour_flags", "abcdef")	// Happy Hour Free Vip Acess content
 
 	register_event("HLTV", "event_round_start", "a", "1=0", "2=0")
 	set_task(5.0 , "hh_update", TASK_HH, _ , _, "b")
@@ -100,8 +131,31 @@ public plugin_init() {
 
 	g_forwards[ITEMS_SELECTED_PRE] = CreateMultiForward("zv_extra_item_selected_pre", ET_CONTINUE, FP_CELL, FP_CELL)
 	g_forwards[ITEMS_SELECTED_POST] = CreateMultiForward("zv_extra_item_selected", ET_CONTINUE, FP_CELL, FP_CELL)
+	g_forwards[HH_START] = CreateMultiForward("zv_happyhour_start", ET_IGNORE)
+	g_forwards[HH_END] = CreateMultiForward("zv_happyhour_end", ET_IGNORE)
 
 	msg_ScoreAttrib = get_user_msgid("ScoreAttrib")
+}
+
+/*===============================================================================
+---> Load CFG File
+=================================================================================*/
+public plugin_cfg() {
+	static cfg_file[64]; get_localinfo("amxx_configsdir", cfg_file, charsmax(cfg_file));
+	format(cfg_file, charsmax(cfg_file), "%s/%s", cfg_file, VIP_SYSTEM_CONFIG_FILE)
+
+	if(file_exists(cfg_file)) {
+		server_cmd("exec %s", cfg_file)
+		server_print("[ZPSp] Configs file Loaded (%s)", cfg_file)
+	} else {
+		server_print("[ZPSp] Configs file not found (%s)", cfg_file)
+	}
+
+	static flags[20]; get_pcvar_string(cvar_hh[4], flags, charsmax(flags));
+	g_hh_flags = read_flags(flags);
+
+	get_pcvar_string(cvar_vip_flag, flags, charsmax(flags));
+	g_vip_flag = read_flags(flags)
 }
 
 /*===============================================================================
@@ -112,6 +166,10 @@ public plugin_natives() {
 	register_native("zv_vip_item_textadd", "native_extra_item_textadd")
 	register_native("zv_get_extra_item_name", "native_get_item_name")
 	register_native("zv_get_extra_item_cost", "native_get_extra_item_cost")
+
+	// 1.1 Natives
+	register_native("zv_is_in_happyhour", "native_is_in_happyhour")
+	register_native("zv_happyhour_flags", "native_happyhour_flags")
 }
 public native_register_extra_item(plugin_id, param_nums) {
 	if(!items_database)
@@ -149,7 +207,11 @@ public native_extra_item_textadd(plugin_id, num_params) {
 	strcat(g_AdditionalMenuText, text, charsmax(g_AdditionalMenuText))
 }
 
-public zp_extra_item_selected(id, itemid) if(itemid == g_itemid) vip_menu(id);
+public native_is_in_happyhour(plugin_id, num_params)
+	return g_happyhour;
+
+public native_happyhour_flags(plugin_id, num_params)
+	return get_hh_acess(get_param(1));
 
 public plugin_end() if(items_database) ArrayDestroy(items_database);
 
@@ -159,8 +221,9 @@ public plugin_end() if(items_database) ArrayDestroy(items_database);
 
 public event_round_start()
 {
-	if(!get_pcvar_num(cvar_hh[0])) {
+	if(!get_pcvar_num(cvar_hh[0]) && g_happyhour) {
 		g_happyhour = false
+		ExecuteForward(g_forwards[HH_END], g_forward_return)
 		return;
 	}
 	if(g_happyhour)
@@ -175,8 +238,7 @@ public event_round_start()
 
 	if(end_hh == start_hh && !g_happyhour) {
 		g_happyhour = true
-		set_pcvar_num(cvar_zm_rwd, get_pcvar_num(cvar_zm_rwd) * get_pcvar_num(cvar_hh[3]))
-		set_pcvar_num(cvar_hm_rwd, get_pcvar_num(cvar_hm_rwd) / get_pcvar_num(cvar_hh[3]))
+		ExecuteForward(g_forwards[HH_START], g_forward_return)
 		remove_task(TASK_HH)
 		return;
 	}
@@ -199,8 +261,6 @@ public hh_update()
 
 	if(end_hh == start_hh && !g_happyhour) {
 		g_happyhour = true
-		set_pcvar_num(cvar_zm_rwd, get_pcvar_num(cvar_zm_rwd) * get_pcvar_num(cvar_hh[3]))
-		set_pcvar_num(cvar_hm_rwd, get_pcvar_num(cvar_hm_rwd) / get_pcvar_num(cvar_hh[3]))
 		return;
 	}
 
@@ -216,8 +276,7 @@ public hh_update()
 start_happy(end_hh) {
 	if(!g_happyhour) {
 		g_happyhour = true
-		set_pcvar_num(cvar_zm_rwd, get_pcvar_num(cvar_zm_rwd) * get_pcvar_num(cvar_hh[3]))
-		set_pcvar_num(cvar_hm_rwd, get_pcvar_num(cvar_hm_rwd) / get_pcvar_num(cvar_hh[3]))
+		ExecuteForward(g_forwards[HH_START], g_forward_return)
 		client_print_color(0, print_team_grey, "%L %L", LANG_PLAYER, "VIP_CHAT_PREFIX", LANG_PLAYER, "VIP_HH_STARTS", end_hh)
 	}
 }
@@ -225,8 +284,7 @@ start_happy(end_hh) {
 stop_happy() {
 	if(g_happyhour) {
 		g_happyhour = false
-		set_pcvar_num(cvar_zm_rwd, get_pcvar_num(cvar_zm_rwd) / get_pcvar_num(cvar_hh[3]))
-		set_pcvar_num(cvar_hm_rwd, get_pcvar_num(cvar_hm_rwd) * get_pcvar_num(cvar_hh[3]))
+		ExecuteForward(g_forwards[HH_END], g_forward_return)
 		client_print_color(0, print_team_grey, "%L %L", LANG_PLAYER, "VIP_CHAT_PREFIX", LANG_PLAYER, "VIP_HH_ENDS")
 	}
 }
@@ -244,7 +302,7 @@ hh_time(h, m, start_hh) {
 public zp_player_show_hud(id, target, SpHudType:hudtype) {
 	if(target)
 		return;
-	if(!get_pcvar_num(cvar_hh[0]) || !get_pcvar_num(cvar_hh[4]))
+	if(!get_pcvar_num(cvar_hh[0]) || !get_pcvar_num(cvar_hh[3]))
 		return;
 
 	static start_hh, end_hh
@@ -284,7 +342,7 @@ public give_armor(id) {
 
 	static amount;
 
-	if(IsPlayerVIP(id) || g_happyhour)
+	if(IsPlayerVIP(id) || get_hh_acess(ACCESS_ARMOR_VIP))
 		amount = get_pcvar_num(cvar_armor_amount)
 	else
 		amount = get_pcvar_num(cvar_free_armor)
@@ -303,20 +361,25 @@ public fw_TakeDamage(victim, inflictor, attacker, Float:damage, damage_type) {
 	if(!is_user_alive(attacker) || !is_user_alive(victim))
 		return HAM_IGNORED
 
-	if(zp_get_user_zombie(attacker) || !IsPlayerVIP(attacker) && !g_happyhour)
+	if(zp_get_user_zombie(attacker))
 		return HAM_IGNORED
 
-	damage *= get_pcvar_float(cvar_dmg_increase)
-	SetHamParamFloat(4, damage)
-	static Float:CvarDmgRwd, CvarApQtd
-	CvarDmgRwd = get_pcvar_float(cvar_dmg_rwd);
-	CvarApQtd = get_pcvar_num(cvar_ammo_dmg_rwd_quantity)
+	if(IsPlayerVIP(attacker) || get_hh_acess(ACCESS_EXTRA_DAMAGE)) {
+		damage *= get_pcvar_float(cvar_dmg_increase)
+		SetHamParamFloat(4, damage)
+	}
 
-	if(CvarDmgRwd > 0.0 && CvarApQtd > 0) {
-		g_damage[attacker] += damage
-		if(g_damage[attacker] > CvarDmgRwd) {
-			zp_add_user_ammopacks(attacker, CvarApQtd)
-			g_damage[attacker] -= CvarDmgRwd
+	if(IsPlayerVIP(attacker) || get_hh_acess(ACCESS_DAMAGE_RWD)) {
+		static Float:CvarDmgRwd, CvarApQtd
+		CvarDmgRwd = get_pcvar_float(cvar_dmg_rwd);
+		CvarApQtd = get_pcvar_num(cvar_ap_dmg_rwd_qtd)
+
+		if(CvarDmgRwd > 0.0 && CvarApQtd > 0) {
+			g_damage[attacker] += damage
+			if(g_damage[attacker] > CvarDmgRwd) {
+				zp_add_user_ammopacks(attacker, CvarApQtd)
+				g_damage[attacker] -= CvarDmgRwd
+			}
 		}
 	}
 
@@ -334,7 +397,7 @@ public setVip() {
 		if(!is_user_alive(i))
 			continue;
 
-		if(!IsPlayerVIP(i) && !g_happyhour)
+		if(!IsPlayerVIP(i) && !get_hh_acess(ACCESS_VIP_SCORE_PREFIX))
 			continue;
 
 		message_begin(MSG_ALL, msg_ScoreAttrib)
@@ -349,6 +412,8 @@ public setVip() {
 /*===============================================================================
 ---> Vip Menu
 =================================================================================*/
+public zp_extra_item_selected(id, itemid) if(itemid == g_itemid) vip_menu(id);
+
 public vip_menu(id) {
 	if(!is_user_alive(id))
 		return
@@ -378,7 +443,7 @@ public vip_menu(id) {
 			continue;
 
 		if(extra_items[i_use_lang]) {
-			if(g_forward_return >= ZP_PLUGIN_HANDLED || !IsPlayerVIP(id) && !g_happyhour || ammo_packs < extra_items[i_cost]) {
+			if(g_forward_return >= ZP_PLUGIN_HANDLED || !IsPlayerVIP(id) && !get_hh_acess(ACCESS_VIP_EXTRA_ITEM) || ammo_packs < extra_items[i_cost]) {
 				formatex(holder, charsmax(holder), "\d%L [%L] [%d] %s", id, extra_items[i_lang_itemname], id, extra_items[i_lang_desc], extra_items[i_cost], g_AdditionalMenuText)
 				menu_additem(menu, holder, fmt("%d", i), (1<<30))
 			}
@@ -388,7 +453,7 @@ public vip_menu(id) {
 			}
 		}
 		else {
-			if(g_forward_return >= ZP_PLUGIN_HANDLED || !IsPlayerVIP(id) && !g_happyhour || ammo_packs < extra_items[i_cost]) {
+			if(g_forward_return >= ZP_PLUGIN_HANDLED || !IsPlayerVIP(id) && !get_hh_acess(ACCESS_VIP_EXTRA_ITEM) || ammo_packs < extra_items[i_cost]) {
 				formatex(holder, charsmax(holder), "\d%s [%s] [%d] %s", extra_items[i_name], extra_items[i_description], extra_items[i_cost], g_AdditionalMenuText)
 				menu_additem(menu, holder, fmt("%d", i), (1<<30))
 			}
@@ -417,7 +482,7 @@ public vip_menu_handler(id, menu, item) {
 		menu_destroy(menu)
 		return PLUGIN_HANDLED;
 	}
-	if(!IsPlayerVIP(id) && !g_happyhour) {
+	if(!IsPlayerVIP(id) && !get_hh_acess(ACCESS_VIP_EXTRA_ITEM)) {
 		client_print_color(id, print_team_default, "%L %L", id, "VIP_CHAT_PREFIX", id, "VIP_NOT_A_VIP")
 		menu_destroy(menu)
 		return PLUGIN_HANDLED;
@@ -453,7 +518,6 @@ public vip_menu_handler(id, menu, item) {
 	return PLUGIN_HANDLED
 }
 
-
 /*===============================================================================
 ---> VIP Connected Message
 =================================================================================*/
@@ -488,7 +552,7 @@ public client_PreThink(id) {
 	obut = get_user_oldbutton(id);
 	ent_flags = get_entity_flags(id);
 	if((nbut & IN_JUMP) && !(ent_flags & FL_ONGROUND) && !(obut & IN_JUMP)) {
-		if(jumpnum[id] < CvarVipJumps && (IsPlayerVIP(id) || g_happyhour) || jumpnum[id] < CvarFreeJumps) {
+		if(jumpnum[id] < CvarVipJumps && (IsPlayerVIP(id) || get_hh_acess(ACCESS_VIP_MULTIJUMP)) || jumpnum[id] < CvarFreeJumps) {
 			dojump[id] = true
 			jumpnum[id]++
 			return PLUGIN_CONTINUE

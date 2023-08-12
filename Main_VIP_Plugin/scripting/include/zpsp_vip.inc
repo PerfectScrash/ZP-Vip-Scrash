@@ -7,11 +7,26 @@
 	#include <zombie_plague_special>
 #endif
 
+#define VIP_INC_VERSION 11
+
 // For noobs
 #define ZV_TEAM_ZOMBIE ZP_TEAM_ZOMBIE
 #define ZV_TEAM_HUMAN ZP_TEAM_HUMAN
 #define ZV_PLUGIN_HANDLED ZP_PLUGIN_HANDLED
 #define ZV_PLUGIN_SUPERCEDE ZP_PLUGIN_SUPERCEDE
+
+// Vip CFG File
+#define VIP_SYSTEM_CONFIG_FILE "zpsp_configs/zpsp_vip.cfg"
+
+// Flags
+#define ACCESS_VIP_MULTIJUMP (1<<0) 	// a
+#define ACCESS_ARMOR_VIP (1<<1)			// b
+#define ACCESS_EXTRA_DAMAGE (1<<2)		// c
+#define ACCESS_VIP_EXTRA_ITEM (1<<3)	// d
+#define ACCESS_DAMAGE_RWD (1<<4)		// e
+#define ACCESS_VIP_SCORE_PREFIX (1<<5)	// f
+
+#define zv_get_hh_flag_access(%1) zv_happyhour_flags(%1)
 
 /**
  * Registers a custom item which will be added to the vip extra items menu of ZP.
@@ -61,6 +76,21 @@ native zv_get_extra_item_cost(itemid);
 native zv_vip_item_textadd(const text[]);
 
 /**
+ * See if is in Happyhour
+ * 
+ * @return			True if yes / false otherwise
+ */
+native zv_is_in_happyhour();
+
+/**
+ * Get HappyHour Privilegies
+ * 
+ * @param flag		Flag Acess ID
+ * @return			True if sucess / false otherwise
+ */
+native zv_happyhour_flags(flag);
+
+/**
  * Called when a player buys an vip extra item from the ZP menu.
  *
  * @note You can now return ZP_PLUGIN_HANDLED in your plugin to block
@@ -82,3 +112,13 @@ forward zv_extra_item_selected(id, itemid);
  * @param itemid	Extra item index
  */
 forward zv_extra_item_selected_pre(id, itemid);
+
+/**
+ * Called when happyhour starts
+ */
+forward zv_happyhour_start();
+
+/**
+ * Called when happyhour ends
+ */
+forward zv_happyhour_end();
