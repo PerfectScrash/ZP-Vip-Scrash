@@ -24,6 +24,7 @@
         - Added Cvar: "zp_vip_flag_acess"
         - Added Native: "zv_is_in_happyhour"
         - Added Native: "zv_happyhour_flags"
+        - Added Native: "zv_is_player_vip"
         - Added Forward: "zv_happyhour_start"
         - Added Forward: "zv_happyhour_end"
 

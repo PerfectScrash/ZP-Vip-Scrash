@@ -221,7 +221,7 @@ public native_is_player_vip(plugin_id, num_params) {
 	if(!is_user_connected(id))
 		return 0;
 
-	return IsPlayerVip(id);
+	return IsPlayerVIP(id);
 }
 
 public plugin_end() if(items_database) ArrayDestroy(items_database);
