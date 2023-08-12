@@ -263,20 +263,24 @@ public hh_update()
 		return;
 	}
 
-	static h, m, start_hh, end_hh
+	new h, start_hh, end_hh
 	start_hh = max(get_pcvar_num(cvar_hh[1]), 0)
 	end_hh = max(get_pcvar_num(cvar_hh[2]), 0)
 
-	if(start_hh > 24) start_hh = 0;
-	if(end_hh > 24) end_hh = 0;
+	if(start_hh >= 24) start_hh = 0;
+	if(end_hh >= 24) end_hh = 0;
 
 	if(end_hh == start_hh && !g_happyhour) {
 		g_happyhour = true
 		return;
 	}
+	new data[3]
+	get_time("%H", data, charsmax(data))
+	h = str_to_num(data)
+	if(h >= 24)
+		h = 0
 
-	time(h, m)
-	if(start_hh <= h < end_hh) {
+	if(start_hh <= h < end_hh && start_hh < end_hh || start_hh >= h < end_hh && start_hh > end_hh) {
 		if(!g_happyhour) start_happy(end_hh);
 	}
 	else {
@@ -287,16 +291,16 @@ public hh_update()
 start_happy(end_hh) {
 	if(!g_happyhour) {
 		g_happyhour = true
-		ExecuteForward(g_forwards[HH_START], g_forward_return)
 		client_print_color(0, print_team_grey, "%L %L", LANG_PLAYER, "VIP_CHAT_PREFIX", LANG_PLAYER, "VIP_HH_STARTS", end_hh)
+		ExecuteForward(g_forwards[HH_START], g_forward_return)
 	}
 }
 
 stop_happy() {
 	if(g_happyhour) {
 		g_happyhour = false
-		ExecuteForward(g_forwards[HH_END], g_forward_return)
 		client_print_color(0, print_team_grey, "%L %L", LANG_PLAYER, "VIP_CHAT_PREFIX", LANG_PLAYER, "VIP_HH_ENDS")
+		ExecuteForward(g_forwards[HH_END], g_forward_return)
 	}
 }
 
@@ -538,7 +542,7 @@ public client_putinserver(id) {
 
 	if(IsPlayerVIP(id)) {
 		static name[32]; get_user_name(id, name, charsmax(name))
-		client_print_color(0, print_team_default, "%L %L", LANG_PLAYER, "VIP_CHAT_PREFIX", LANG_PLAYER, "VIP_CONNECTED")
+		client_print_color(0, print_team_default, "%L %L", LANG_PLAYER, "VIP_CHAT_PREFIX", LANG_PLAYER, "VIP_CONNECTED", name)
 	}
 }
 
