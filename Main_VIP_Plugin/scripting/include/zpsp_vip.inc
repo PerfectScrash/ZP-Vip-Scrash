@@ -76,6 +76,14 @@ native zv_get_extra_item_cost(itemid);
 native zv_vip_item_textadd(const text[]);
 
 /**
+ * See if user has vip
+ * 
+ * @param id		Player Index
+ * @return			True if yes / false otherwise
+ */
+native zv_is_player_vip(id);
+
+/**
  * See if is in Happyhour
  * 
  * @return			True if yes / false otherwise

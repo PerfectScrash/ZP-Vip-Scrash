@@ -25,6 +25,7 @@
 			- Added Cvar: "zp_vip_flag_acess"
 			- Added Native: "zv_is_in_happyhour"
 			- Added Native: "zv_happyhour_flags"
+			- Added Native: "zv_is_player_vip"
 			- Added Forward: "zv_happyhour_start"
 			- Added Forward: "zv_happyhour_end"
 
@@ -170,6 +171,7 @@ public plugin_natives() {
 	// 1.1 Natives
 	register_native("zv_is_in_happyhour", "native_is_in_happyhour")
 	register_native("zv_happyhour_flags", "native_happyhour_flags")
+	register_native("zv_is_player_vip", "native_is_player_vip")
 }
 public native_register_extra_item(plugin_id, param_nums) {
 	if(!items_database)
@@ -212,6 +214,15 @@ public native_is_in_happyhour(plugin_id, num_params)
 
 public native_happyhour_flags(plugin_id, num_params)
 	return get_hh_acess(get_param(1));
+
+public native_is_player_vip(plugin_id, num_params) {
+	static id; id = get_param(1);
+
+	if(!is_user_connected(id))
+		return 0;
+
+	return IsPlayerVip(id);
+}
 
 public plugin_end() if(items_database) ArrayDestroy(items_database);
 
