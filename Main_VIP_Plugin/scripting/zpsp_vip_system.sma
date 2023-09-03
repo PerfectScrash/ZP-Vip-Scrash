@@ -28,6 +28,8 @@
 			- Added Native: "zv_is_player_vip"
 			- Added Forward: "zv_happyhour_start"
 			- Added Forward: "zv_happyhour_end"
+		- 1.2:
+			- Fixed Happy Hour Time
 
 	* Credits:
 		- [P]erfect [S]crash: For Zombie plague special Vip system.
@@ -263,7 +265,7 @@ public hh_update()
 		return;
 	}
 
-	new h, start_hh, end_hh
+	new h, m, start_hh, end_hh
 	start_hh = max(get_pcvar_num(cvar_hh[1]), 0)
 	end_hh = max(get_pcvar_num(cvar_hh[2]), 0)
 
@@ -274,13 +276,11 @@ public hh_update()
 		g_happyhour = true
 		return;
 	}
-	new data[3]
-	get_time("%H", data, charsmax(data))
-	h = str_to_num(data)
+	time(h, m)
 	if(h >= 24)
 		h = 0
 
-	if(start_hh <= h < end_hh && start_hh < end_hh || start_hh >= h < end_hh && start_hh > end_hh) {
+	if(start_hh <= h < end_hh+24 || start_hh >= h < end_hh && start_hh > end_hh) {
 		if(!g_happyhour) start_happy(end_hh);
 	}
 	else {

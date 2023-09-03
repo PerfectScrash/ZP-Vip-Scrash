@@ -27,6 +27,8 @@
         - Added Native: "zv_is_player_vip"
         - Added Forward: "zv_happyhour_start"
         - Added Forward: "zv_happyhour_end"
+    - 1.2:
+        - Fixed Happy Hour time
 
 ### Credits:
     - [P]erfect [S]crash: For Zombie plague special Vip system.
